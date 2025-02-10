@@ -1,6 +1,7 @@
+import { BehaviorSubject, filter, map, Subscription } from "rxjs";
 import { Directory, ID, Inode } from "../entity";
 import { FsService } from "./interface";
-import { v4 as uuidv4 } from 'uuid';
+import { Mutex } from "async-mutex";
 
 enum FsActionType {
     MKNODE,
@@ -82,9 +83,12 @@ class Delete extends FsAction {
 }
 
 class LocalStoreFsServiceRepo {
+    private updates: BehaviorSubject<ID> = new BehaviorSubject<ID>("root")
+
     constructor() { }
+
     public getInode(id: ID): Inode | null {
-        const inodeStr = localStorage.get(`inode/${id}`)
+        const inodeStr = localStorage.getItem(`inode/${id}`)
         if (inodeStr == null) {
             return null
         } else {
@@ -92,30 +96,43 @@ class LocalStoreFsServiceRepo {
         }
     }
     public saveInode(value: Inode) {
-        localStorage.set(`inode/${value.id}`, value.toJsonStr())
+        localStorage.setItem(`inode/${value.id}`, value.toJsonStr())
+        this.updates.next(value.id)
+    }
+    public deleteInode(id: ID) {
+        localStorage.removeItem(`inode/${id}`)
+    }
+    public watchInode(value: ID, callback: () => void): Subscription {
+        return this.updates.pipe(
+            filter((x) => x == value),
+            map((_) => callback())
+        ).subscribe()
+    }
+
+    public getKey(key: string): string | null {
+        return localStorage.getItem(key);
+    }
+    public saveKey(key: string, value: string) {
+        localStorage.setItem(key, value)
+    }
+    public deleteKey(key: string) {
+        localStorage.removeItem(key)
     }
 }
 
 export class LocalStoreFsService implements FsService {
     private lock: boolean = false;
-    private watchCB: (store: StorageEvent) => void;
+    private mutex = new Mutex()
+    private repo: LocalStoreFsServiceRepo;
 
     constructor() {
-        {
-            const rootStr = localStorage.getItem('inode/root')
-            if (rootStr == undefined || !(Inode.fromJsonStr(rootStr) instanceof Directory)) {
-                localStorage.setItem('inode/root', new Directory('root', "HOME", []).toJsonStr())
-            }
+        this.repo = new LocalStoreFsServiceRepo()
+        // Create root if it does not exists
+        const rootInode = this.repo.getInode('root')
+        if (rootInode == null || !(rootInode instanceof Directory)) {
+            this.repo.saveInode(new Directory('root', 'HOME', []))
         }
         this._applyExistingAction()
-        // start watcher
-        this.watchCB = (event: StorageEvent) => {
-            if (event.key?.startsWith('inode/')) {
-                const key = event.key?.slice('inode/'.length, event.key?.length - 1)
-                this.notify(key)
-            }
-        }
-        window.addEventListener('storage', this.watchCB)
     }
 
     private Lock() {
@@ -148,36 +165,30 @@ export class LocalStoreFsService implements FsService {
 
     private _applyMknode(action: Mknode) {
         // Update the directory children
-        const directoryStr = localStorage.getItem(`inode/${action.dest}`)
-        if (directoryStr == undefined) {
+        const directoryInode = this.repo.getInode(action.dest);
+        if (directoryInode == null) {
             throw new Error('destination_not_found')
         } else {
-            const directory: Inode = Inode.fromJsonStr(directoryStr)
-            if (directory instanceof Directory) {
-                if (!directory.children.includes(action.inode.id)) {
-                    directory.children.push(action.inode.id);
-                    localStorage.setItem(
-                        `inode/${action.dest}`,
-                        directory.toJsonStr()
-                    );
+            if (directoryInode instanceof Directory) {
+                if (!directoryInode.children.includes(action.inode.id)) {
+                    directoryInode.children.push(action.inode.id)
+                    this.repo.saveInode(directoryInode)
                 }
             } else {
                 throw new Error("invalid_inode_type")
             }
         }
+
         // Create the Inode
-        localStorage.setItem(
-            `inode/${action.inode.id}`,
-            action.inode.toJsonStr()
-        )
+        this.repo.saveInode(action.inode)
     }
 
     private _applyMv(action: Mv) {
         // Verify srcDir, srcInode, dest
         const validFlag = (() => {
             // check if the request has been validated
-            const flag = localStorage.getItem("fs/mv/valid")
-            return flag != undefined
+            const flag = this.repo.getKey("fs/mv/valid")
+            return flag != null
         })()
         if (
             validFlag
@@ -185,88 +196,72 @@ export class LocalStoreFsService implements FsService {
             (
                 (() => {
                     // check if action.srcDir is a directory which contains srcInode as one of it's children
-                    const srcDirStr = localStorage.getItem(`inode/${action.srcDir}`)
-                    if (srcDirStr != undefined) {
-                        const srcDir: Inode = Inode.fromJsonStr(srcDirStr);
-                        return (srcDir instanceof Directory && srcDir.children.includes(action.srcInode))
-                    } else {
-                        return false
-                    }
+                    const srcDirInode = this.repo.getInode(action.srcDir);
+                    return srcDirInode != null
+                        && srcDirInode instanceof Directory
+                        && srcDirInode.children.includes(action.srcInode)
                 })()
                 &&
                 (() => {
                     // check if action.dest is a directory
-                    const destStr = localStorage.getItem(`inode/${action.srcDir}`)
-                    if (destStr != undefined) {
-                        const dest: Inode = Inode.fromJsonStr(destStr)
-                        return (dest instanceof Directory)
-                    } else {
-                        return false
-                    }
+                    const destInode = this.repo.getInode(action.dest)
+                    return destInode != null
+                        && destInode instanceof Directory
                 })()
             )
         ) {
             if (!validFlag) {
-                localStorage.setItem("fs/mv/valid", "t")
+                this.repo.saveKey("fs/mv/valid", "t")
             }
             // Remove action.srcInode from action.srcDir
-            const srcDirStr = localStorage.getItem(`inode/${action.srcDir}`)
-            if (srcDirStr != undefined) {
-                const srcDir: Inode = Inode.fromJsonStr(srcDirStr)
-                if (srcDir instanceof Directory && srcDir.children.includes(action.srcInode)) {
-                    srcDir.children = srcDir.children.filter((v) => v != action.srcInode)
-                    localStorage.setItem(`inode/${action.srcDir}`, srcDir.toJsonStr())
-                }
+            const srcDirInode = this.repo.getInode(action.srcDir);
+            if (srcDirInode instanceof Directory && srcDirInode.children.includes(action.srcInode)) {
+                srcDirInode.children = srcDirInode.children.filter((v) => v != action.srcInode)
+                this.repo.saveInode(srcDirInode)
             }
             // Add action.srcInode to action.dest
-            const destStr = localStorage.getItem(`inode/${action.dest}`)
-            if (destStr != undefined) {
-                const dest: Inode = Inode.fromJsonStr(destStr)
-                if (dest instanceof Directory && !dest.children.includes(action.srcInode)) {
-                    dest.children.push(action.srcInode)
-                    localStorage.setItem(`inode/${action.dest}`, dest.toJsonStr())
-                }
+            const destInode = this.repo.getInode(action.dest)
+            if (destInode instanceof Directory && !destInode.children.includes(action.srcInode)) {
+                destInode.children.push(action.srcInode)
+                this.repo.saveInode(destInode)
             }
-            localStorage.removeItem("fs/mv/valid")
+            this.repo.deleteKey("fs/mv/valid")
         }
     }
 
     private _applyRename(action: Rename) {
-        const inodeStr = localStorage.getItem(`inode/${action.src}`)
-        if (inodeStr == undefined) {
+        const inode = this.repo.getInode(action.src)
+        if (inode == null) {
             throw new Error("src_does_not_exist")
         } else {
-            const inode: Inode = Inode.fromJsonStr(inodeStr)
             inode.name = action.name
-            localStorage.setItem(`inode/${action.src}`, inode.toJsonStr())
+            this.repo.saveInode(inode)
         }
     }
 
     private _applyDelete(action: Delete) {
-        function removeDir(elementID: ID) {
-            const elementStr = localStorage.getItem(`inode/${elementID}`)
-            if (elementStr != undefined) {
-                const inode: Inode = Inode.fromJsonStr(elementStr)
-                if (inode instanceof Directory) {
-                    inode.children.forEach((v) => removeDir(v))
+        const repo = this.repo;
+        function deleteInodeRec(elementID: ID) {
+            const elementInode = repo.getInode(elementID)
+            if (elementInode != null) {
+                if (elementInode instanceof Directory) {
+                    elementInode.children.forEach((v) => deleteInodeRec(v))
                 }
-                localStorage.removeItem(`inode/${elementID}`)
+                repo.deleteInode(elementID)
             }
         }
         // Remove it from the parent directory children
-        const srcDirStr = localStorage.getItem(`inode/${action.srcDir}`)
-        if (srcDirStr == undefined) {
+        const srcDirInode = this.repo.getInode(action.srcDir)
+        if (srcDirInode == null) {
             throw new Error("src_dir_not_found")
-        } else {
-            const srcDir: Inode = Inode.fromJsonStr(srcDirStr)
-            if (srcDir instanceof Directory) {
-                if (srcDir.children.includes(action.srcInode)) {
-                    // Delete Inodes recursively
-                    removeDir(action.srcInode)
-                }
-            } else {
-                throw new Error("src_dir_is_not_a_directory")
+        } else if (srcDirInode instanceof Directory) {
+            if (srcDirInode.children.includes(action.srcInode)) {
+                deleteInodeRec(action.srcInode)
+                srcDirInode.children = srcDirInode.children.filter((e) => e != action.srcInode)
+                this.repo.saveInode(srcDirInode)
             }
+        } else {
+            throw new Error("src_dir_is_not_a_directory")
         }
     }
 
@@ -274,9 +269,7 @@ export class LocalStoreFsService implements FsService {
         // Get the lock (for mutation)
         this.Lock()
         // Start the transaction (by saving the action)
-        localStorage.setItem(
-            'currentAction',
-            action.toJsonStr()
+        localStorage.setItem('currentAction', action.toJsonStr()
         )
         // Perform The action
         this._apply(action)
@@ -300,71 +293,38 @@ export class LocalStoreFsService implements FsService {
     }
 
     getInode(id: ID): Promise<Inode> {
-        const inodeStr = localStorage.getItem(`inode/${id}`)
-        if (inodeStr != undefined) {
-            const inode: Inode = Inode.fromJsonStr(inodeStr)
-            return Promise.resolve(inode)
-        } else {
-            return Promise.reject('not_found')
-        }
+        const inode = this.repo.getInode(id)
+        return inode == null ? Promise.reject('not_found') : Promise.resolve(inode)
     }
     getDirectoryChildren(id: ID): Promise<Array<Inode>> {
-        const inodeStr = localStorage.getItem(`inode/${id}`)
-        if (inodeStr != undefined) {
-            const inode: Inode = Inode.fromJsonStr(inodeStr)
-            if (inode instanceof Directory) {
-                try {
-                    return Promise.resolve<Array<Inode>>(
-                        inode.children.map((v: ID) => {
-                            const inodeStrLocal = localStorage.getItem(`inode/${v}`)
-                            if (inodeStrLocal == undefined) {
-                                throw new Error('one_or_more_inode_not_found')
-                            } else {
-                                return Inode.fromJsonStr(inodeStrLocal)
-                            }
-                        })
-                    )
-                } catch (err) {
-                    if (err instanceof Error) {
-                        return Promise.reject(err.message)
-                    } else {
-                        return Promise.reject("unknown_error")
-                    }
+        const inode = this.repo.getInode(id)
+        if (inode == null) {
+            return Promise.reject('not_found')
+        } else if (inode instanceof Directory) {
+            try {
+                return Promise.resolve<Array<Inode>>(
+                    inode.children.map((v: ID) => {
+                        const inodeLocal = this.repo.getInode(v)
+                        if (inodeLocal == undefined) {
+                            throw new Error('one_or_more_inode_not_found')
+                        } else {
+                            return inodeLocal
+                        }
+                    })
+                )
+            } catch (err) {
+                if (err instanceof Error) {
+                    return Promise.reject(err.message)
+                } else {
+                    return Promise.reject("unknown_error")
                 }
-            } else {
-                return Promise.reject('invalid_inode_type')
             }
         } else {
-            return Promise.reject('not_found')
+            return Promise.reject('invalid_inode_type')
         }
     }
-    private underWatch = new Map<string, Map<string, () => void>>()
-    notify(id: ID): void {
-        console.log(`update : ${id}`)
-        const cbs = this.underWatch.get(id)
-        if (cbs != null) {
-            cbs.forEach((v, _k, _m) => v())
-        }
-    }
-    watchInode(id: ID, cb: () => void): string {
-        const watchID = uuidv4()
-        console.log(`Watch Start : ${id} - ${watchID}`) // debug
-        const cbs = this.underWatch.get(id)
-        if (cbs == null) {
-            const t: Map<string, () => void> = new Map();
-            t.set(watchID, cb)
-            this.underWatch.set(id, t)
-        } else {
-            cbs.set(watchID, cb)
-        }
-        return watchID
-    }
-    unWatchInode(id: ID, watchID: string): void {
-        console.log(`Watch End : ${id} - ${watchID}`) // debug
-        const cbs = this.underWatch.get(id)
-        if (cbs != null) {
-            cbs.delete(watchID)
-        }
+    watchInode(id: ID, cb: () => void): Subscription {
+        return this.repo.watchInode(id, cb)
     }
     createInode(dest: ID, value: Inode): Promise<void> {
         this.applyNewAction(new Mknode(dest, value))

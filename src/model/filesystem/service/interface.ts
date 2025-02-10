@@ -1,3 +1,4 @@
+import { Subscription } from "rxjs";
 import { ID, Inode } from "../entity";
 
 export interface FsService {
@@ -5,8 +6,7 @@ export interface FsService {
     getInode(id: ID): Promise<Inode>,
     getDirectoryChildren(id: ID): Promise<Array<Inode>>,
     // Watch
-    watchInode(id: ID, cb: () => void): string,
-    unWatchInode(id: ID, watchID: string): void,
+    watchInode(id: ID, cb: () => void): Subscription,
     // Create
     createInode(dest: ID, value: Inode): Promise<void>
     // Update

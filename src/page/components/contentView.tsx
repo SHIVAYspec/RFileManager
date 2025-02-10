@@ -51,7 +51,12 @@ export const ContenteView: FC<{}> = () => {
         >
             <Stack
                 padding={1}
-                direction={"row"} spacing={1}>
+                gap={1}
+                direction={"row"}
+                flexWrap={"wrap"}
+                justifyContent={"flex-start"}
+                alignItems={"start"}
+            >
                 {contents.map((e) => <InodeCard key={e.id} inode={e} />)}
             </Stack>
             <ContextMenu
