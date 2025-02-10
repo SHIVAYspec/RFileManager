@@ -2,11 +2,18 @@ import { createAsyncThunk, createSlice, PayloadAction, Slice } from "@reduxjs/to
 import { ID, Inode } from "../../model/filesystem/entity";
 import { FsService } from "../../model/filesystem/service/interface";
 
+export enum ClipboardMode {
+    COPY,
+    CUT
+}
+
 type T = {
     loading: boolean,
     history: Array<ID>
     cwdIndex: number,
     contents: Array<Inode>
+    clipboard: Array<ID>
+    clipboardMode: ClipboardMode
 }
 
 
@@ -15,6 +22,8 @@ const initialState: T = {
     history: ["root"],
     cwdIndex: 0,
     contents: [],
+    clipboard: [],
+    clipboardMode: ClipboardMode.COPY,
 }
 
 export const fileSystemNavSlice: Slice<T> = createSlice({
@@ -40,6 +49,9 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
                 state.cwdIndex = ++state.cwdIndex
             }
             state.history.push(action.payload)
+        },
+        updateClipboard: (state, action: PayloadAction<Array<ID>>) => {
+            state.clipboard = action.payload
         },
     },
     extraReducers: (builder) => {

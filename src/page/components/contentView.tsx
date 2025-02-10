@@ -4,12 +4,17 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import ShortcutIcon from '@mui/icons-material/Shortcut';
 import ListItemIcon from "@mui/material/ListItemIcon";
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
-import Divider from "@mui/material/Divider";
-import { Directory, Inode } from "../../model/filesystem/entity";
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import MoreTimeIcon from '@mui/icons-material/MoreTime';
+import SortIcon from '@mui/icons-material/Sort';
+import { Directory, File, Inode } from "../../model/filesystem/entity";
 import { RootState } from "../../state/store";
 import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
@@ -73,6 +78,7 @@ const ContentViewContextMenu: FC<{
 }> = ({ isOpen, anchorEl, handleClose }) => {
     const fsService: FsService = useFsService()
     const fm: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex])
+    const clipboard: Array<string> = useSelector((state: RootState) => state.fileSystemNav.clipboard)
     return <Menu
         open={isOpen}
         anchorEl={anchorEl}
@@ -82,7 +88,7 @@ const ContentViewContextMenu: FC<{
             vertical: "top"
         }}
     >
-        <MenuItem onClick={() => {
+        <MenuItem disabled={clipboard.length == 0} onClick={() => {
             handleClose();
         }}>
             <ListItemIcon>
@@ -90,7 +96,20 @@ const ContentViewContextMenu: FC<{
             </ListItemIcon>
             Paste
         </MenuItem>
+        <MenuItem disabled={clipboard.length == 0} onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <ShortcutIcon />
+            </ListItemIcon>
+            Paste Shortcut
+        </MenuItem>
+
         <Divider />
+
+        <MenuItem disabled={true}>
+            New
+        </MenuItem>
         <MenuItem onClick={() => {
             handleClose();
             fsService.createInode(
@@ -101,15 +120,71 @@ const ContentViewContextMenu: FC<{
             <ListItemIcon>
                 <CreateNewFolderIcon />
             </ListItemIcon>
-            New Folder
+            Folder
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+            fsService.createInode(
+                fm,
+                File.newDefaultFile()
+            )
+        }}>
+            <ListItemIcon>
+                <NoteAddIcon />
+            </ListItemIcon>
+            File
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem disabled={true}>
+            Sort Type
         </MenuItem>
         <MenuItem onClick={() => {
             handleClose();
         }}>
             <ListItemIcon>
-                <NoteAddIcon />
+                <SortByAlphaIcon />
             </ListItemIcon>
-            New File
+            Name
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <AccessTimeIcon />
+            </ListItemIcon>
+            Create Time
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <MoreTimeIcon />
+            </ListItemIcon>
+            Last Modified Time
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem disabled={true}>
+            Sort Order
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <MoreTimeIcon />
+            </ListItemIcon>
+            Ascending
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <SortIcon />
+            </ListItemIcon>
+            Descending
         </MenuItem>
     </Menu>
 }

@@ -1,20 +1,28 @@
 import { FC, useState } from "react";
-import { Inode, InodeType } from "../../model/filesystem/entity";
+import { Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
 import Card from "@mui/material/Card";
 import CardMedia from "@mui/material/CardMedia";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
+import { navAppend } from "../../state/slices/fileSystemNav";
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ShortcutIcon from '@mui/icons-material/Shortcut';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
-import ContentPasteIcon from '@mui/icons-material/ContentPaste';
-import Typography from "@mui/material/Typography";
+import ContentCutIcon from '@mui/icons-material/ContentCut';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
+import { Divider } from "@mui/material";
 
 const iconDim = 100;
 
 export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
+    const dispatch = useDispatch<AppDispatch>()
+
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const isOpen: boolean = Boolean(anchorEl)
     const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -35,12 +43,24 @@ export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
             }
         }}
         onContextMenu={handleContextMenu}
+        onClick={() => {
+            switch (inode.type) {
+                case InodeType.Directory:
+                    dispatch(navAppend(inode.id))
+                    return
+                case InodeType.SymbolicLink:
+                    if (inode instanceof SymbolicLink) {
+                        dispatch(navAppend(inode.destinationID))
+                    }
+            }
+        }}
     >
         <CardMedia>
             <InodeCardIcon inodeType={inode.type} />
         </CardMedia>
         <Typography align="center"> {inode.name} </Typography>
         <InodeCardContextMenu
+            inode={inode}
             isOpen={isOpen}
             anchorEl={anchorEl}
             handleClose={handleClose}
@@ -49,10 +69,11 @@ export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
 }
 
 const InodeCardContextMenu: FC<{
+    inode: Inode,
     isOpen: boolean,
     anchorEl: HTMLElement | null
     handleClose: () => void
-}> = ({ isOpen, anchorEl, handleClose }) => {
+}> = ({ inode, isOpen, anchorEl, handleClose }) => {
     return <Menu
         open={isOpen}
         anchorEl={anchorEl}
@@ -62,13 +83,37 @@ const InodeCardContextMenu: FC<{
             vertical: "top"
         }}
     >
+        <MenuItem disabled={true}>
+            {inode.name}
+        </MenuItem>
+        <Divider />
+
         <MenuItem onClick={() => {
             handleClose();
         }}>
             <ListItemIcon>
-                <ContentPasteIcon />
+                <DriveFileRenameOutlineIcon />
             </ListItemIcon>
-            Paste
+            Rename
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <ContentCutIcon />
+            </ListItemIcon>
+            Cut
+        </MenuItem>
+        <MenuItem onClick={() => {
+            handleClose();
+        }}>
+            <ListItemIcon>
+                <ContentCopyIcon />
+            </ListItemIcon>
+            Copy
         </MenuItem>
     </Menu>
 }
