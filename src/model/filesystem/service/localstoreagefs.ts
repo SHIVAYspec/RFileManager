@@ -121,8 +121,7 @@ class LocalStoreFsServiceRepo {
 }
 
 export class LocalStoreFsService implements FsService {
-    private lock: boolean = false;
-    private mutex = new Mutex()
+    private mutex = new Mutex();
     private repo: LocalStoreFsServiceRepo;
 
     constructor() {
@@ -133,20 +132,6 @@ export class LocalStoreFsService implements FsService {
             this.repo.saveInode(new Directory('root', 'HOME', []))
         }
         this._applyExistingAction()
-    }
-
-    private Lock() {
-        // Acquire the lock
-        if (this.lock) {
-            throw new Error("already_locked")
-        }
-        this.lock = true;
-    }
-    private Unlock() {
-        if (!this.lock) {
-            throw new Error("already_unlocked")
-        }
-        this.lock = false;
     }
 
     private _apply(action: FsAction) {
@@ -266,62 +251,62 @@ export class LocalStoreFsService implements FsService {
     }
 
     private applyNewAction(action: FsAction) {
-        // Get the lock (for mutation)
-        this.Lock()
-        // Start the transaction (by saving the action)
-        localStorage.setItem('currentAction', action.toJsonStr()
-        )
-        // Perform The action
-        this._apply(action)
-        // End the transaction (by deleting the action)
-        localStorage.removeItem('currentAction')
-        // Unlock
-        this.Unlock()
+        this.mutex.runExclusive(() => {
+            // Start the transaction (by saving the action)
+            localStorage.setItem('currentAction', action.toJsonStr())
+            // Perform The action
+            this._apply(action)
+            // End the transaction (by deleting the action)
+            localStorage.removeItem('currentAction')
+        });
     }
 
     private _applyExistingAction() {
-        this.Lock()
-        // Load the action
-        const actionStr = localStorage.getItem('currentAction')
-        if (actionStr != undefined) {
-            const action: FsAction = FsAction.fromJsonStr(actionStr)
-            this._apply(action)
-            localStorage.removeItem('currentAction')
-        }
-        this.Unlock()
-        return
+        this.mutex.runExclusive(() => {
+            // Load the action
+            const actionStr = localStorage.getItem('currentAction')
+            if (actionStr != undefined) {
+                const action: FsAction = FsAction.fromJsonStr(actionStr)
+                this._apply(action)
+                localStorage.removeItem('currentAction')
+            }
+        })
     }
 
     getInode(id: ID): Promise<Inode> {
-        const inode = this.repo.getInode(id)
-        return inode == null ? Promise.reject('not_found') : Promise.resolve(inode)
+        return this.mutex.runExclusive<Inode>(() => {
+            const inode = this.repo.getInode(id)
+            return inode == null ? Promise.reject('not_found') : Promise.resolve(inode)
+        })
     }
     getDirectoryChildren(id: ID): Promise<Array<Inode>> {
-        const inode = this.repo.getInode(id)
-        if (inode == null) {
-            return Promise.reject('not_found')
-        } else if (inode instanceof Directory) {
-            try {
-                return Promise.resolve<Array<Inode>>(
-                    inode.children.map((v: ID) => {
-                        const inodeLocal = this.repo.getInode(v)
-                        if (inodeLocal == undefined) {
-                            throw new Error('one_or_more_inode_not_found')
-                        } else {
-                            return inodeLocal
-                        }
-                    })
-                )
-            } catch (err) {
-                if (err instanceof Error) {
-                    return Promise.reject(err.message)
-                } else {
-                    return Promise.reject("unknown_error")
+        return this.mutex.runExclusive<Array<Inode>>(() => {
+            const inode = this.repo.getInode(id)
+            if (inode == null) {
+                return Promise.reject('not_found')
+            } else if (inode instanceof Directory) {
+                try {
+                    return Promise.resolve<Array<Inode>>(
+                        inode.children.map((v: ID) => {
+                            const inodeLocal = this.repo.getInode(v)
+                            if (inodeLocal == undefined) {
+                                throw new Error('one_or_more_inode_not_found')
+                            } else {
+                                return inodeLocal
+                            }
+                        })
+                    )
+                } catch (err) {
+                    if (err instanceof Error) {
+                        return Promise.reject(err.message)
+                    } else {
+                        return Promise.reject("unknown_error")
+                    }
                 }
+            } else {
+                return Promise.reject('invalid_inode_type')
             }
-        } else {
-            return Promise.reject('invalid_inode_type')
-        }
+        })
     }
     watchInode(id: ID, cb: () => void): Subscription {
         return this.repo.watchInode(id, cb)
