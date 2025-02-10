@@ -169,6 +169,9 @@ export class LocalStoreFsService implements FsService {
     }
 
     private _applyMv(action: Mv) {
+        if (action.srcDir == action.dest) {
+            return
+        }
         // Verify srcDir, srcInode, dest
         const validFlag = (() => {
             // check if the request has been validated
