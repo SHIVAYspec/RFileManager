@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -30,8 +30,12 @@ export const ContenteView: FC<{}> = () => {
     const handleClose = () => {
         setAnchorEl(null)
     }
-
+    const searchFilter: string = useSelector((state: RootState) => state.theme.searchFilter)
     const contents: Array<Inode> = useSelector((state: RootState) => state.fileSystemNav.contents)
+    const filteredContents: Array<Inode> = useMemo(() =>
+        contents.filter((e) => e.name.toLowerCase().includes(searchFilter.toLowerCase()))
+        , [contents, searchFilter])
+
     if (contents.length == 0) {
         return <Stack
             onContextMenu={handleContextMenu}
@@ -60,10 +64,11 @@ export const ContenteView: FC<{}> = () => {
                 justifyContent={"flex-start"}
                 alignItems={"start"}
             >
-                {contents.map((e) => <InodeCard
-                    key={e.id}
-                    inode={e}
-                />)}
+                {filteredContents
+                    .map((e) => <InodeCard
+                        key={e.id}
+                        inode={e}
+                    />)}
             </Stack>
             <ContentViewContextMenu
                 isOpen={isOpen}
