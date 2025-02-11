@@ -9,7 +9,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../state/store";
-import { navAppend } from "../../state/slices/fileSystemNav";
+import { ClipboardMode, navAppend, updateClipboard } from "../../state/slices/fileSystemNav";
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ShortcutIcon from '@mui/icons-material/Shortcut';
@@ -84,6 +84,7 @@ const InodeCardContextMenu: FC<{
     anchorEl: HTMLElement | null
     handleClose: () => void
 }> = ({ inode, isOpen, anchorEl, handleClose }) => {
+    const dispatch = useDispatch<AppDispatch>();
     const fsService: FsService = useFsService()
     const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
 
@@ -159,6 +160,11 @@ const InodeCardContextMenu: FC<{
             <Divider />
 
             <MenuItem onClick={() => {
+                dispatch(updateClipboard({
+                    mode: ClipboardMode.CUT,
+                    parentDir: cwdID,
+                    src: inode.id
+                }))
                 handleClose();
             }}>
                 <ListItemIcon>
@@ -167,6 +173,11 @@ const InodeCardContextMenu: FC<{
                 Cut
             </MenuItem>
             <MenuItem onClick={() => {
+                dispatch(updateClipboard({
+                    mode: ClipboardMode.COPY,
+                    parentDir: cwdID,
+                    src: inode.id,
+                }))
                 handleClose();
             }}>
                 <ListItemIcon>

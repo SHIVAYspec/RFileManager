@@ -261,8 +261,8 @@ export class LocalStoreFsService implements FsService {
         }
     }
 
-    private applyNewAction(action: FsAction) {
-        this.mutex.runExclusive(() => {
+    private applyNewAction(action: FsAction): Promise<void> {
+        return this.mutex.runExclusive(() => {
             // Start the transaction (by saving the action)
             localStorage.setItem('currentAction', action.toJsonStr())
             // Perform The action
@@ -326,19 +326,18 @@ export class LocalStoreFsService implements FsService {
         return this.repo.watchInodes(ids, cb)
     }
     createInode(dest: ID, value: Inode): Promise<void> {
-        this.applyNewAction(new Mknode(dest, value))
-        return Promise.resolve()
+        return this.applyNewAction(new Mknode(dest, value))
     }
     moveInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void> {
-        this.applyNewAction(new Mv(srcDir, srcInode, dest))
-        return Promise.resolve()
+        return this.applyNewAction(new Mv(srcDir, srcInode, dest))
+    }
+    copyInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void> {
+        throw new Error("Method not implemented.");
     }
     renameInode(src: ID, name: string): Promise<void> {
-        this.applyNewAction(new Rename(src, name))
-        return Promise.resolve()
+        return this.applyNewAction(new Rename(src, name))
     }
     removeInodeByID(srcDir: ID, srcInode: ID): Promise<void> {
-        this.applyNewAction(new Delete(srcDir, srcInode))
-        return Promise.resolve()
+        return this.applyNewAction(new Delete(srcDir, srcInode))
     }
 }

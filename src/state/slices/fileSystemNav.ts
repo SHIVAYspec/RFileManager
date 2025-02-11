@@ -7,6 +7,12 @@ export enum ClipboardMode {
     CUT
 }
 
+export type Clipboard = {
+    mode: ClipboardMode,
+    parentDir: ID,
+    src: ID,
+}
+
 type T = {
     loading: boolean,
     history: Array<{
@@ -16,8 +22,7 @@ type T = {
     cwdIndex: number,
     contents: Array<Inode>
     contentsError?: string
-    clipboard: Array<ID>
-    clipboardMode: ClipboardMode
+    clipboard?: Clipboard
 }
 
 
@@ -27,8 +32,7 @@ const initialState: T = {
     cwdIndex: 0,
     contents: [],
     contentsError: undefined,
-    clipboard: [],
-    clipboardMode: ClipboardMode.COPY,
+    clipboard: undefined,
 }
 
 export const fileSystemNavSlice: Slice<T> = createSlice({
@@ -55,9 +59,8 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
             }
             state.history.push({ id: action.payload })
         },
-        updateClipboard: (state, action: PayloadAction<{ clipboard: Array<ID>, clipboardMode: ClipboardMode }>) => {
-            state.clipboard = action.payload.clipboard
-            state.clipboardMode = action.payload.clipboardMode
+        updateClipboard: (state, action: PayloadAction<Clipboard | undefined>) => {
+            state.clipboard = action.payload
         },
     },
     extraReducers: (builder) => {

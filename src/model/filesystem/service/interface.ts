@@ -12,6 +12,7 @@ export interface FsService {
     createInode(dest: ID, value: Inode): Promise<void>
     // Update
     moveInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void>,
+    copyInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void>,
     renameInode(src: ID, name: string): Promise<void>
     // Delete
     removeInodeByID(srcDir: ID, srcInode: ID): Promise<void>,

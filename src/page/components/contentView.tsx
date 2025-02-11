@@ -14,7 +14,7 @@ import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import SortIcon from '@mui/icons-material/Sort';
-import { Directory, File, Inode } from "../../model/filesystem/entity";
+import { Directory, File, Inode, SymbolicLink } from "../../model/filesystem/entity";
 import { AppDispatch, RootState } from "../../state/store";
 import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
@@ -22,6 +22,7 @@ import { InodeCard } from "./inodeCard";
 import { setSortingOrder, setSortingType, SortingOrder, SortingType } from "../../state/slices/theme";
 import Alert from "@mui/material/Alert";
 import { AlertTitle } from "@mui/material";
+import { Clipboard, ClipboardMode, updateClipboard } from "../../state/slices/fileSystemNav";
 
 export const ContenteView: FC<{}> = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -141,12 +142,12 @@ const ContentViewContextMenu: FC<{
     anchorEl: HTMLElement | null
     handleClose: () => void
 }> = ({ isOpen, anchorEl, handleClose }) => {
+    const fsService: FsService = useFsService()
     const dispatch = useDispatch<AppDispatch>();
+    const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
     const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
     const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
-    const fsService: FsService = useFsService()
-    const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
-    const clipboard: Array<string> = useSelector((state: RootState) => state.fileSystemNav.clipboard)
+    const clipboard: Clipboard | undefined = useSelector((state: RootState) => state.fileSystemNav.clipboard)
     return <Menu
         open={isOpen}
         anchorEl={anchorEl}
@@ -156,16 +157,37 @@ const ContentViewContextMenu: FC<{
             vertical: "top"
         }}
     >
-        <MenuItem disabled={clipboard.length == 0} onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem disabled={clipboard == undefined} onClick={() => {
+            if (clipboard != undefined) {
+                dispatch(updateClipboard(undefined))
+                switch (clipboard.mode) {
+                    case ClipboardMode.CUT:
+                        fsService.moveInode(clipboard.parentDir, clipboard.src, cwdID)
+                            .then(() => handleClose())
+                        break;
+                    case ClipboardMode.COPY:
+                        fsService.copyInode(clipboard.parentDir, clipboard.src, cwdID)
+                            .then(() => handleClose())
+                        break;
+                }
+            }
+        }
+        }>
             <ListItemIcon>
                 <ContentPasteIcon />
             </ListItemIcon>
             Paste
         </MenuItem>
-        <MenuItem disabled={clipboard.length == 0} onClick={() => {
-            handleClose();
+        <MenuItem disabled={clipboard == undefined} onClick={() => {
+            if (clipboard != undefined) {
+                dispatch(updateClipboard(undefined))
+                fsService.createInode(
+                    cwdID,
+                    SymbolicLink.newDefaultSymbodicLink(clipboard.src)
+                ).then(() => {
+                    handleClose()
+                })
+            }
         }}>
             <ListItemIcon>
                 <ShortcutIcon />
