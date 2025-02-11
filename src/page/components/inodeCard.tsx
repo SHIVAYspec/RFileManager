@@ -186,7 +186,7 @@ const iconSx = {
 const InodeCardIcon: FC<{ inodeType: InodeType }> = ({ inodeType }) => {
     switch (inodeType) {
         case InodeType.Directory:
-            return <FolderIcon sx={iconSx} />
+            return <FolderIcon color={"info"} sx={iconSx} />
         case InodeType.File:
             return <InsertDriveFileIcon sx={iconSx} />
         case InodeType.SymbolicLink:

@@ -20,6 +20,8 @@ import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
 import { InodeCard } from "./inodeCard";
 import { setSortingOrder, setSortingType, SortingOrder, SortingType } from "../../state/slices/theme";
+import Alert from "@mui/material/Alert";
+import { AlertTitle } from "@mui/material";
 
 export const ContenteView: FC<{}> = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -31,7 +33,9 @@ export const ContenteView: FC<{}> = () => {
     const handleClose = () => {
         setAnchorEl(null)
     }
+    const loading: boolean = useSelector((state: RootState) => state.fileSystemNav.loading)
     const contents: Array<Inode> = useSelector((state: RootState) => state.fileSystemNav.contents)
+    const contentsError: string | undefined = useSelector((state: RootState) => state.fileSystemNav.contentsError)
     const searchFilter: string = useSelector((state: RootState) => state.theme.searchFilter)
     const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
     const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
@@ -64,47 +68,72 @@ export const ContenteView: FC<{}> = () => {
         }
     }, [contents, searchFilter, sortingType, sortingOrder])
 
-    if (contents.length == 0) {
+    if (loading) {
         return <Stack
-            onContextMenu={handleContextMenu}
             width="100%" height="100%"
             alignItems={"center"} justifyContent={"center"}>
-            <ContentViewContextMenu
-                isOpen={isOpen}
-                anchorEl={anchorEl}
-                handleClose={handleClose}
-            />
-            <Typography variant="h1">EMPTY</Typography>
+            <Typography variant="h1">Loading</Typography>
+            <Alert severity="info">
+                <AlertTitle>Loading</AlertTitle>
+            </Alert>
         </Stack>
     } else {
-        return <Stack
-            onContextMenu={handleContextMenu}
-            width="100%" height="100%"
-            sx={{
-                overflow: "auto"
-            }}
-        >
-            <Stack
-                padding={1}
-                gap={1}
-                direction={"row"}
-                flexWrap={"wrap"}
-                justifyContent={"flex-start"}
-                alignItems={"start"}
-            >
-                {filteredContents
-                    .map((e) => <InodeCard
-                        key={e.id}
-                        inode={e}
-                    />)}
+        if (contentsError == undefined) {
+            if (contents.length == 0) {
+                return <Stack
+                    onContextMenu={handleContextMenu}
+                    width="100%" height="100%"
+                    alignItems={"center"} justifyContent={"center"}>
+                    <ContentViewContextMenu
+                        isOpen={isOpen}
+                        anchorEl={anchorEl}
+                        handleClose={handleClose}
+                    />
+                    <Alert severity="warning">
+                        <AlertTitle>Empty</AlertTitle>
+                    </Alert>
+                </Stack>
+            } else {
+                return <Stack
+                    onContextMenu={handleContextMenu}
+                    width="100%" height="100%"
+                    sx={{
+                        overflow: "auto"
+                    }}
+                >
+                    <Stack
+                        padding={1}
+                        gap={1}
+                        direction={"row"}
+                        flexWrap={"wrap"}
+                        justifyContent={"flex-start"}
+                        alignItems={"start"}
+                    >
+                        {filteredContents
+                            .map((e) => <InodeCard
+                                key={e.id}
+                                inode={e}
+                            />)}
+                    </Stack>
+                    <ContentViewContextMenu
+                        isOpen={isOpen}
+                        anchorEl={anchorEl}
+                        handleClose={handleClose}
+                    />
+                </Stack>
+            }
+        } else {
+            return <Stack
+                width="100%" height="100%"
+                alignItems={"center"} justifyContent={"center"}>
+                <Alert severity="error">
+                    <AlertTitle>Error Loading</AlertTitle>
+                    {contentsError}
+                </Alert>
             </Stack>
-            <ContentViewContextMenu
-                isOpen={isOpen}
-                anchorEl={anchorEl}
-                handleClose={handleClose}
-            />
-        </Stack>
+        }
     }
+
 }
 
 const ContentViewContextMenu: FC<{

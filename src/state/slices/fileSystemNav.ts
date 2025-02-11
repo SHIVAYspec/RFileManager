@@ -66,13 +66,13 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
             .addCase(list.pending, (state) => {
                 state.loading = true
                 state.contentsError = undefined
+                state.contents = []
             })
             .addCase(list.fulfilled, (state, action) => {
                 state.contents = action.payload
                 state.loading = false
             })
             .addCase(list.rejected, (state, action) => {
-                state.contents = []
                 state.contentsError = action.error.message
                 state.loading = false
             })
