@@ -96,6 +96,7 @@ class LocalStoreFsServiceRepo {
         }
     }
     public saveInode(value: Inode) {
+        value.mtime = new Date().getTime()
         localStorage.setItem(`inode/${value.id}`, value.toJsonStr())
         this.updates.next(value.id)
     }
@@ -135,7 +136,8 @@ export class LocalStoreFsService implements FsService {
         // Create root if it does not exists
         const rootInode = this.repo.getInode('root')
         if (rootInode == null || !(rootInode instanceof Directory)) {
-            this.repo.saveInode(new Directory('root', 'HOME', []))
+            const time: number = new Date().getTime()
+            this.repo.saveInode(new Directory('root', 'HOME', time, time, []))
         }
         this._applyExistingAction()
     }
