@@ -1,22 +1,31 @@
 import { FC, useState } from "react";
-import { Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
+import { ID, Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
 import Card from "@mui/material/Card";
 import CardMedia from "@mui/material/CardMedia";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../state/store";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Divider from "@mui/material/Divider";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../state/store";
 import { navAppend } from "../../state/slices/fileSystemNav";
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ShortcutIcon from '@mui/icons-material/Shortcut';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
-import ListItemIcon from "@mui/material/ListItemIcon";
 import ContentCutIcon from '@mui/icons-material/ContentCut';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
-import { Divider } from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useFsService } from "../../state/fsService";
+import { FsService } from "../../model/filesystem/service/interface";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
 
 const iconDim = 100;
 
@@ -44,7 +53,7 @@ export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
             }
         }}
         onContextMenu={handleContextMenu}
-        onClick={() => {
+        onDoubleClick={() => {
             switch (inode.type) {
                 case InodeType.Directory:
                     dispatch(navAppend(inode.id))
@@ -75,48 +84,98 @@ const InodeCardContextMenu: FC<{
     anchorEl: HTMLElement | null
     handleClose: () => void
 }> = ({ inode, isOpen, anchorEl, handleClose }) => {
-    return <Menu
-        open={isOpen}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-            horizontal: "left",
-            vertical: "top"
-        }}
-    >
-        <MenuItem disabled={true}>
-            {inode.name}
-        </MenuItem>
-        <Divider />
+    const fsService: FsService = useFsService()
+    const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
 
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
-            <ListItemIcon>
-                <DriveFileRenameOutlineIcon />
-            </ListItemIcon>
-            Rename
-        </MenuItem>
+    const [open, setOpen] = useState<boolean>(false);
+    const [text, setText] = useState<string>(inode.name);
 
-        <Divider />
+    return <>
+        <Dialog open={open} onClose={() => { setOpen(false) }}>
+            <DialogTitle>Rename</DialogTitle>
+            <DialogContent>
+                <TextField
+                    autoFocus
+                    margin="dense"
+                    label="New Name"
+                    fullWidth
+                    variant="outlined"
+                    value={text}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        setText(event.target.value)
+                    }}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => {
+                    setOpen(false)
+                    setText(inode.name)
+                }} color="primary">
+                    Cancel
+                </Button>
+                <Button onClick={() => {
+                    setOpen(false)
+                    fsService.renameInode(inode.id, text);
+                }} color="primary">
+                    Submit
+                </Button>
+            </DialogActions>
+        </Dialog>
+        <Menu
+            open={isOpen}
+            anchorEl={anchorEl}
+            onClose={handleClose}
+            anchorOrigin={{
+                horizontal: "left",
+                vertical: "top"
+            }}
+        >
+            <MenuItem disabled={true}>
+                {inode.name}
+            </MenuItem>
 
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
-            <ListItemIcon>
-                <ContentCutIcon />
-            </ListItemIcon>
-            Cut
-        </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
-            <ListItemIcon>
-                <ContentCopyIcon />
-            </ListItemIcon>
-            Copy
-        </MenuItem>
-    </Menu>
+            <Divider />
+
+            <MenuItem onClick={() => {
+                handleClose();
+                setOpen(true);
+            }}>
+                <ListItemIcon>
+                    <DriveFileRenameOutlineIcon />
+                </ListItemIcon>
+                Rename
+            </MenuItem>
+            <MenuItem onClick={() => {
+                fsService.removeInodeByID(cwdID, inode.id).then(() => {
+                    handleClose();
+                })
+            }}>
+                <ListItemIcon>
+                    <DeleteIcon />
+                </ListItemIcon>
+                Delete
+            </MenuItem>
+
+            <Divider />
+
+            <MenuItem onClick={() => {
+                handleClose();
+            }}>
+                <ListItemIcon>
+                    <ContentCutIcon />
+                </ListItemIcon>
+                Cut
+            </MenuItem>
+            <MenuItem onClick={() => {
+                handleClose();
+            }}>
+                <ListItemIcon>
+                    <ContentCopyIcon />
+                </ListItemIcon>
+                Copy
+            </MenuItem>
+        </Menu>
+    </>
 }
 
 const iconSx = {

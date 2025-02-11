@@ -15,7 +15,8 @@ const store = configureStore({
                 ignoredPaths: ['fileSystemNav'],
                 ignoredActions: [
                     'fs/list/fulfilled',
-                    'fs/addinodeinhistory/fulfilled'
+                    'fs/addinodeinhistory/fulfilled',
+                    'fs/updateInodeInContents/fulfilled'
                 ]
             }
         })

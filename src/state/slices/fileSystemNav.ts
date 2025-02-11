@@ -65,13 +65,16 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
         builder
             .addCase(list.pending, (state) => {
                 state.loading = true
+                state.contentsError = undefined
             })
             .addCase(list.fulfilled, (state, action) => {
                 state.contents = action.payload
                 state.loading = false
             })
             .addCase(list.rejected, (state, action) => {
+                state.contents = []
                 state.contentsError = action.error.message
+                state.loading = false
             })
         // 'fs/addinodeinhistory'
         builder
@@ -79,6 +82,14 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
                 const historyIndex = state.history.findIndex((value) => value.id == action.payload.id)
                 if (historyIndex != -1) {
                     state.history[historyIndex].inode = action.payload
+                }
+            })
+        // 'fs/updateInodeInContents'
+        builder
+            .addCase(updateInodeInContents.fulfilled, (state, action: PayloadAction<Inode>) => {
+                const contentIndex = state.contents.findIndex((value) => value.id == action.payload.id)
+                if (contentIndex != -1) {
+                    state.contents[contentIndex] = action.payload
                 }
             })
     }
@@ -90,6 +101,10 @@ export const list = createAsyncThunk('fs/list', async (props: { service: FsServi
 
 export const addinodeinhistory = createAsyncThunk('fs/addinodeinhistory', async (props: { service: FsService, path: ID }): Promise<Inode> => {
     return props.service.getInode(props.path)
+})
+
+export const updateInodeInContents = createAsyncThunk('fs/updateInodeInContents', async (props: { service: FsService, id: ID }): Promise<Inode> => {
+    return props.service.getInode(props.id)
 })
 
 

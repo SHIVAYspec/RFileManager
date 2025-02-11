@@ -15,6 +15,7 @@ import { navBackward, navForward } from "../../state/slices/fileSystemNav";
 import { ContentViewType, setContentViewType, setSearchFilter } from "../../state/slices/theme";
 import Tooltip from "@mui/material/Tooltip";
 import { BehaviorSubject, debounceTime, map, Subscription } from "rxjs";
+import Box from "@mui/material/Box";
 
 export const MenuBar: FC<{}> = () => {
     return <Stack
@@ -39,20 +40,24 @@ const Nav: FC<{}> = () => {
         alignItems={"center"}
     >
         <Tooltip title={"Go to Previous Directory"}>
-            <IconButton
-                disabled={!navBackwardEnabled}
-                onClick={() => dispatch(navBackward(null))}
-            >
-                <ArrowBackIosIcon />
-            </IconButton>
+            <Box>
+                <IconButton
+                    disabled={!navBackwardEnabled}
+                    onClick={() => dispatch(navBackward(null))}
+                >
+                    <ArrowBackIosIcon />
+                </IconButton>
+            </Box>
         </Tooltip>
         <Tooltip title={"Go to Next Directory"}>
-            <IconButton
-                disabled={!navForwardEnabled}
-                onClick={() => dispatch(navForward(null))}
-            >
-                <ArrowForwardIosIcon />
-            </IconButton>
+            <Box>
+                <IconButton
+                    disabled={!navForwardEnabled}
+                    onClick={() => dispatch(navForward(null))}
+                >
+                    <ArrowForwardIosIcon />
+                </IconButton>
+            </Box>
         </Tooltip>
         <Typography variant="h5" fontWeight={"bold"}>
             {currentDir ?? ""}
@@ -70,36 +75,42 @@ const ViewMenuAndSearch: FC<{}> = () => {
         alignItems={"center"}
     >
         <Tooltip title={"Large Grid View"}>
-            <IconButton
-                disabled={contentViewType == ContentViewType.BigGrid}
-                onClick={() => {
-                    dispatch(setContentViewType(ContentViewType.BigGrid))
-                }}
-            >
-                <AppsIcon />
-            </IconButton>
+            <Box>
+                <IconButton
+                    disabled={contentViewType == ContentViewType.BigGrid}
+                    onClick={() => {
+                        dispatch(setContentViewType(ContentViewType.BigGrid))
+                    }}
+                >
+                    <AppsIcon />
+                </IconButton>
+            </Box>
         </Tooltip>
         <Divider orientation="vertical" />
         <Tooltip title={"Small Grid View"}>
-            <IconButton
-                disabled={contentViewType == ContentViewType.SmallGrid}
-                onClick={() => {
-                    dispatch(setContentViewType(ContentViewType.SmallGrid))
-                }}
-            >
-                <ViewCompactIcon />
-            </IconButton>
+            <Box>
+                <IconButton
+                    disabled={contentViewType == ContentViewType.SmallGrid}
+                    onClick={() => {
+                        dispatch(setContentViewType(ContentViewType.SmallGrid))
+                    }}
+                >
+                    <ViewCompactIcon />
+                </IconButton>
+            </Box>
         </Tooltip>
         <Divider orientation="vertical" />
         <Tooltip title={"Detailed View"}>
-            <IconButton
-                disabled={contentViewType == ContentViewType.Detailed}
-                onClick={() => {
-                    dispatch(setContentViewType(ContentViewType.Detailed))
-                }}
-            >
-                <TableRowsIcon />
-            </IconButton>
+            <Box>
+                <IconButton
+                    disabled={contentViewType == ContentViewType.Detailed}
+                    onClick={() => {
+                        dispatch(setContentViewType(ContentViewType.Detailed))
+                    }}
+                >
+                    <TableRowsIcon />
+                </IconButton>
+            </Box>
         </Tooltip>
         <Search />
     </Stack>
