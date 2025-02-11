@@ -7,6 +7,7 @@ export interface FsService {
     getDirectoryChildren(id: ID): Promise<Array<Inode>>,
     // Watch
     watchInode(id: ID, cb: () => void): Subscription,
+    watchInodes(ids: Array<ID>, cb: (id: ID) => void): Subscription,
     // Create
     createInode(dest: ID, value: Inode): Promise<void>
     // Update

@@ -38,6 +38,7 @@ export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
         variant="outlined"
         sx={{
             width: iconDim,
+            background: (theme) => theme.palette.primary.light,
             "&:hover": {
                 background: (theme) => theme.palette.primary.dark,
             }

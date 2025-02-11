@@ -13,7 +13,10 @@ const store = configureStore({
         return getDefaultMiddleware({
             serializableCheck: {
                 ignoredPaths: ['fileSystemNav'],
-                ignoredActions: ['fs/list/fulfilled']
+                ignoredActions: [
+                    'fs/list/fulfilled',
+                    'fs/addinodeinhistory/fulfilled'
+                ]
             }
         })
     }
@@ -24,5 +27,3 @@ export default store;
 export type RootState = ReturnType<typeof store.getState>
 
 export type AppDispatch = typeof store.dispatch
-
-

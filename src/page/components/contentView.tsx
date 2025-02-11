@@ -48,6 +48,9 @@ export const ContenteView: FC<{}> = () => {
         return <Stack
             onContextMenu={handleContextMenu}
             width="100%" height="100%"
+            sx={{
+                overflow: "auto"
+            }}
         >
             <Stack
                 padding={1}
@@ -77,7 +80,7 @@ const ContentViewContextMenu: FC<{
     handleClose: () => void
 }> = ({ isOpen, anchorEl, handleClose }) => {
     const fsService: FsService = useFsService()
-    const fm: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex])
+    const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
     const clipboard: Array<string> = useSelector((state: RootState) => state.fileSystemNav.clipboard)
     return <Menu
         open={isOpen}
@@ -113,7 +116,7 @@ const ContentViewContextMenu: FC<{
         <MenuItem onClick={() => {
             handleClose();
             fsService.createInode(
-                fm,
+                cwdID,
                 Directory.newDefaultDirectory()
             )
         }}>
@@ -125,7 +128,7 @@ const ContentViewContextMenu: FC<{
         <MenuItem onClick={() => {
             handleClose();
             fsService.createInode(
-                fm,
+                cwdID,
                 File.newDefaultFile()
             )
         }}>

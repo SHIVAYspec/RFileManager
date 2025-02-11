@@ -5,7 +5,7 @@ interface T {
 }
 
 const initialState: T = {
-    theme: "system",
+    theme: "dark",
 }
 
 export const themeSlice: Slice<T> = createSlice({

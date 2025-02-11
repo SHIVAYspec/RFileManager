@@ -108,6 +108,12 @@ class LocalStoreFsServiceRepo {
             map((_) => callback())
         ).subscribe()
     }
+    public watchInodes(ids: Array<ID>, callback: (id: ID) => void): Subscription {
+        return this.updates.pipe(
+            filter((id) => ids.includes(id)),
+            map((id) => callback(id))
+        ).subscribe()
+    }
 
     public getKey(key: string): string | null {
         return localStorage.getItem(key);
@@ -313,6 +319,9 @@ export class LocalStoreFsService implements FsService {
     }
     watchInode(id: ID, cb: () => void): Subscription {
         return this.repo.watchInode(id, cb)
+    }
+    watchInodes(ids: Array<ID>, cb: (id: ID) => void): Subscription {
+        return this.repo.watchInodes(ids, cb)
     }
     createInode(dest: ID, value: Inode): Promise<void> {
         this.applyNewAction(new Mknode(dest, value))

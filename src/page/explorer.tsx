@@ -3,6 +3,7 @@ import Stack from "@mui/material/Stack"
 import { FC } from "react"
 import { ViewPortBox } from "./components/ViewPortBox"
 import { ContenteView } from "./components/contentView"
+import { MenuBar } from "./components/menubar"
 // import { useSelector } from "react-redux"
 // import { RootState } from "../state/store"
 
@@ -21,7 +22,10 @@ export const Explorer: FC<{}> = () => {
                 width="80%"
                 bgcolor={"primary.light"}
             >
-                <ContenteView />
+                <Stack width={"100%"} height={"100%"}>
+                    <MenuBar />
+                    <ContenteView />
+                </Stack>
             </Box>
         </Stack>
     </ViewPortBox>

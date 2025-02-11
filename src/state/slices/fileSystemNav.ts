@@ -9,9 +9,13 @@ export enum ClipboardMode {
 
 type T = {
     loading: boolean,
-    history: Array<ID>
+    history: Array<{
+        id: ID,
+        inode?: Inode
+    }>
     cwdIndex: number,
     contents: Array<Inode>
+    contentsError?: string
     clipboard: Array<ID>
     clipboardMode: ClipboardMode
 }
@@ -19,9 +23,10 @@ type T = {
 
 const initialState: T = {
     loading: true,
-    history: ["root"],
+    history: [{ id: "root" }],
     cwdIndex: 0,
     contents: [],
+    contentsError: undefined,
     clipboard: [],
     clipboardMode: ClipboardMode.COPY,
 }
@@ -48,10 +53,11 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
             } else {
                 state.cwdIndex = ++state.cwdIndex
             }
-            state.history.push(action.payload)
+            state.history.push({ id: action.payload })
         },
-        updateClipboard: (state, action: PayloadAction<Array<ID>>) => {
-            state.clipboard = action.payload
+        updateClipboard: (state, action: PayloadAction<{ clipboard: Array<ID>, clipboardMode: ClipboardMode }>) => {
+            state.clipboard = action.payload.clipboard
+            state.clipboardMode = action.payload.clipboardMode
         },
     },
     extraReducers: (builder) => {
@@ -64,6 +70,17 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
                 state.contents = action.payload
                 state.loading = false
             })
+            .addCase(list.rejected, (state, action) => {
+                state.contentsError = action.error.message
+            })
+        // 'fs/addinodeinhistory'
+        builder
+            .addCase(addinodeinhistory.fulfilled, (state, action: PayloadAction<Inode>) => {
+                const historyIndex = state.history.findIndex((value) => value.id == action.payload.id)
+                if (historyIndex != -1) {
+                    state.history[historyIndex].inode = action.payload
+                }
+            })
     }
 });
 
@@ -71,5 +88,9 @@ export const list = createAsyncThunk('fs/list', async (props: { service: FsServi
     return props.service.getDirectoryChildren(props.path)
 })
 
+export const addinodeinhistory = createAsyncThunk('fs/addinodeinhistory', async (props: { service: FsService, path: ID }): Promise<Inode> => {
+    return props.service.getInode(props.path)
+})
 
-export const { navForward, navBackward, navAppend } = fileSystemNavSlice.actions
+
+export const { navForward, navBackward, navAppend, updateClipboard } = fileSystemNavSlice.actions
