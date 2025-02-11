@@ -1,5 +1,5 @@
 import { FC, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Menu from "@mui/material/Menu";
@@ -15,10 +15,11 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import SortIcon from '@mui/icons-material/Sort';
 import { Directory, File, Inode } from "../../model/filesystem/entity";
-import { RootState } from "../../state/store";
+import { AppDispatch, RootState } from "../../state/store";
 import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
 import { InodeCard } from "./inodeCard";
+import { setSortingOrder, SortingOrder, SortingType } from "../../state/slices/theme";
 
 export const ContenteView: FC<{}> = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -30,11 +31,25 @@ export const ContenteView: FC<{}> = () => {
     const handleClose = () => {
         setAnchorEl(null)
     }
-    const searchFilter: string = useSelector((state: RootState) => state.theme.searchFilter)
     const contents: Array<Inode> = useSelector((state: RootState) => state.fileSystemNav.contents)
-    const filteredContents: Array<Inode> = useMemo(() =>
-        contents.filter((e) => e.name.toLowerCase().includes(searchFilter.toLowerCase()))
-        , [contents, searchFilter])
+    const searchFilter: string = useSelector((state: RootState) => state.theme.searchFilter)
+    const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
+    const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
+    const filteredContents: Array<Inode> = useMemo(() => {
+        const c = contents
+            .filter((e) => e.name.toLowerCase().includes(searchFilter.toLowerCase()))
+            .sort((a, b) => {
+                if (a.name < b.name) return -1;
+                if (a.name > b.name) return 1;
+                return 0;
+            });
+        switch (sortingOrder) {
+            case SortingOrder.ASCENDING:
+                return c;
+            case SortingOrder.DESCENDING:
+                return c.reverse();
+        }
+    }, [contents, searchFilter, sortingType, sortingOrder])
 
     if (contents.length == 0) {
         return <Stack
@@ -84,6 +99,8 @@ const ContentViewContextMenu: FC<{
     anchorEl: HTMLElement | null
     handleClose: () => void
 }> = ({ isOpen, anchorEl, handleClose }) => {
+    const dispatch = useDispatch<AppDispatch>();
+    const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
     const fsService: FsService = useFsService()
     const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
     const clipboard: Array<string> = useSelector((state: RootState) => state.fileSystemNav.clipboard)
@@ -178,17 +195,23 @@ const ContentViewContextMenu: FC<{
         <MenuItem disabled={true}>
             Sort Order
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem
+            disabled={sortingOrder == SortingOrder.ASCENDING}
+            onClick={() => {
+                handleClose();
+                dispatch(setSortingOrder(SortingOrder.ASCENDING));
+            }}>
             <ListItemIcon>
                 <MoreTimeIcon />
             </ListItemIcon>
             Ascending
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem
+            disabled={sortingOrder == SortingOrder.DESCENDING}
+            onClick={() => {
+                handleClose();
+                dispatch(setSortingOrder(SortingOrder.DESCENDING));
+            }}>
             <ListItemIcon>
                 <SortIcon />
             </ListItemIcon>

@@ -6,16 +6,31 @@ export enum ContentViewType {
     Detailed,
 }
 
+export enum SortingType {
+    NAME,
+    CTIME,
+    MTIME,
+}
+
+export enum SortingOrder {
+    ASCENDING,
+    DESCENDING,
+}
+
 interface T {
     theme: string
     contentViewType: ContentViewType
-    searchFilter: string,
+    searchFilter: string
+    sortingType: SortingType
+    sortingOrder: SortingOrder
 }
 
 const initialState: T = {
     theme: "dark",
     contentViewType: ContentViewType.BigGrid,
     searchFilter: "",
+    sortingType: SortingType.NAME,
+    sortingOrder: SortingOrder.ASCENDING,
 }
 
 export const themeSlice: Slice<T> = createSlice({
@@ -30,8 +45,14 @@ export const themeSlice: Slice<T> = createSlice({
         },
         setSearchFilter: (state, action: PayloadAction<string>) => {
             state.searchFilter = action.payload
+        },
+        setSortingType: (state, action: PayloadAction<SortingType>) => {
+            state.sortingType = action.payload
+        },
+        setSortingOrder: (state, action: PayloadAction<SortingOrder>) => {
+            state.sortingOrder = action.payload
         }
     }
 })
 
-export const { changeTheme, setContentViewType, setSearchFilter } = themeSlice.actions
+export const { changeTheme, setContentViewType, setSearchFilter, setSortingType, setSortingOrder } = themeSlice.actions
