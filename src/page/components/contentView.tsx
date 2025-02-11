@@ -19,7 +19,7 @@ import { AppDispatch, RootState } from "../../state/store";
 import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
 import { InodeCard } from "./inodeCard";
-import { setSortingOrder, SortingOrder, SortingType } from "../../state/slices/theme";
+import { setSortingOrder, setSortingType, SortingOrder, SortingType } from "../../state/slices/theme";
 
 export const ContenteView: FC<{}> = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -36,13 +36,26 @@ export const ContenteView: FC<{}> = () => {
     const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
     const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
     const filteredContents: Array<Inode> = useMemo(() => {
+        const idFn: (e: Inode) => number | string = ((): (e: Inode) => number | string => {
+            switch (sortingType) {
+                case SortingType.NAME:
+                    return (e: Inode) => e.name
+                case SortingType.CTIME:
+                    return (e: Inode) => e.ctime
+                case SortingType.MTIME:
+                    return (e: Inode) => e.mtime
+            }
+        })()
         const c = contents
             .filter((e) => e.name.toLowerCase().includes(searchFilter.toLowerCase()))
-            .sort((a, b) => {
-                if (a.name < b.name) return -1;
-                if (a.name > b.name) return 1;
-                return 0;
-            });
+            .sort(
+                (a, b) => {
+                    const ae = idFn(a)
+                    const be = idFn(b)
+                    if (ae < be) return -1;
+                    if (ae > be) return 1;
+                    return 0;
+                });
         switch (sortingOrder) {
             case SortingOrder.ASCENDING:
                 return c;
@@ -100,6 +113,7 @@ const ContentViewContextMenu: FC<{
     handleClose: () => void
 }> = ({ isOpen, anchorEl, handleClose }) => {
     const dispatch = useDispatch<AppDispatch>();
+    const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
     const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
     const fsService: FsService = useFsService()
     const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
@@ -165,25 +179,37 @@ const ContentViewContextMenu: FC<{
         <MenuItem disabled={true}>
             Sort Type
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem
+            disabled={sortingType == SortingType.NAME}
+            onClick={() => {
+                dispatch(setSortingType(SortingType.NAME))
+                handleClose();
+            }}
+        >
             <ListItemIcon>
                 <SortByAlphaIcon />
             </ListItemIcon>
             Name
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem
+            disabled={sortingType == SortingType.CTIME}
+            onClick={() => {
+                dispatch(setSortingType(SortingType.CTIME))
+                handleClose();
+            }}
+        >
             <ListItemIcon>
                 <AccessTimeIcon />
             </ListItemIcon>
             Create Time
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-        }}>
+        <MenuItem
+            disabled={sortingType == SortingType.MTIME}
+            onClick={() => {
+                dispatch(setSortingType(SortingType.MTIME))
+                handleClose();
+            }}
+        >
             <ListItemIcon>
                 <MoreTimeIcon />
             </ListItemIcon>
