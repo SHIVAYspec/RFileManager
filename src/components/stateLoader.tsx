@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
-import { Provider, useSelector } from 'react-redux';
-import store, { RootState } from '../state/store';
+import { Provider } from 'react-redux';
+import store from '../state/store';
 import { ProvideLocalStoreFsService } from '../state/fsService';
 import { connect } from '../state/connectFsServiceAndStore';
 

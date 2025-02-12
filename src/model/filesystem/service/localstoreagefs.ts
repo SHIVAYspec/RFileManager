@@ -342,7 +342,7 @@ export class LocalStoreFsService implements FsService {
     moveInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void> {
         return this.applyNewAction(new Mv(srcDir, srcInode, dest))
     }
-    copyInode(srcDir: ID, srcInode: ID, dest: ID): Promise<void> {
+    copyInode(_srcDir: ID, _srcInode: ID, _dest: ID): Promise<void> {
         throw new Error("Method not implemented.");
     }
     renameInode(src: ID, name: string): Promise<void> {
