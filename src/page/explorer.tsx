@@ -4,6 +4,7 @@ import { FC } from "react"
 import { ViewPortBox } from "./components/ViewPortBox"
 import { ContenteView } from "./components/contentView"
 import { MenuBar } from "./components/menubar"
+import { Sidebar } from "./components/sidebar"
 // import { useSelector } from "react-redux"
 // import { RootState } from "../state/store"
 
@@ -16,6 +17,7 @@ export const Explorer: FC<{}> = () => {
                 minWidth="256px"
                 bgcolor={"primary.dark"}
             >
+                <Sidebar />
             </Box>
             <Box
                 height="100%"

@@ -81,10 +81,19 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
             })
         // 'fs/addinodeinhistory'
         builder
-            .addCase(addinodeinhistory.fulfilled, (state, action: PayloadAction<Inode>) => {
-                const historyIndex = state.history.findIndex((value) => value.id == action.payload.id)
-                if (historyIndex != -1) {
-                    state.history[historyIndex].inode = action.payload
+            .addCase(addinodeinhistory.fulfilled, (state, action: PayloadAction<Inode | ID>) => {
+                if (action.payload instanceof Inode) {
+                    const inode: Inode = action.payload
+                    const historyIndex = state.history.findIndex((value) => value.id == inode.id)
+                    if (historyIndex != -1) {
+                        state.history[historyIndex].inode = inode
+                    }
+                } else if (typeof action.payload == "string") {
+                    const id: ID = action.payload
+                    const historyIndex = state.history.findIndex((value) => value.id == id)
+                    if (historyIndex != -1) {
+                        state.history[historyIndex].inode = undefined
+                    }
                 }
             })
         // 'fs/updateInodeInContents'
@@ -102,8 +111,12 @@ export const list = createAsyncThunk('fs/list', async (props: { service: FsServi
     return props.service.getDirectoryChildren(props.path)
 })
 
-export const addinodeinhistory = createAsyncThunk('fs/addinodeinhistory', async (props: { service: FsService, path: ID }): Promise<Inode> => {
-    return props.service.getInode(props.path)
+export const addinodeinhistory = createAsyncThunk('fs/addinodeinhistory', async (props: { service: FsService, path: ID }): Promise<Inode | ID> => {
+    try {
+        return await props.service.getInode(props.path)
+    } catch (error) {
+        return props.path
+    }
 })
 
 export const updateInodeInContents = createAsyncThunk('fs/updateInodeInContents', async (props: { service: FsService, id: ID }): Promise<Inode> => {

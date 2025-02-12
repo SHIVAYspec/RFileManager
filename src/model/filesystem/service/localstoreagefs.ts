@@ -102,6 +102,7 @@ class LocalStoreFsServiceRepo {
     }
     public deleteInode(id: ID) {
         localStorage.removeItem(`inode/${id}`)
+        this.updates.next(id)
     }
     public watchInode(value: ID, callback: () => void): Subscription {
         return this.updates.pipe(

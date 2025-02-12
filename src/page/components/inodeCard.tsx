@@ -94,7 +94,13 @@ export const InodeCard = forwardRef<HTMLDivElement, { inode: Inode }>(
             }}
         >
             <CardMedia>
-                <InodeCardIcon inodeType={inode.type} />
+                <InodeCardIcon
+                    inodeType={inode.type}
+                    iconSx={{
+                        height: iconDim,
+                        width: "100%",
+                    }}
+                />
             </CardMedia>
             <Typography align="center"> {inode.name} </Typography>
             <InodeCardContextMenu
@@ -218,12 +224,13 @@ const InodeCardContextMenu: FC<{
     </>
 }
 
-const iconSx = {
-    height: iconDim,
-    width: "100%",
-}
-
-const InodeCardIcon: FC<{ inodeType: InodeType }> = ({ inodeType }) => {
+export const InodeCardIcon: FC<{
+    inodeType: InodeType,
+    iconSx?: {
+        height?: number,
+        width?: string,
+    },
+}> = ({ inodeType, iconSx }) => {
     switch (inodeType) {
         case InodeType.Directory:
             return <FolderIcon color={"info"} sx={iconSx} />
