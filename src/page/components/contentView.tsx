@@ -23,6 +23,8 @@ import { setSortingOrder, setSortingType, SortingOrder, SortingType } from "../.
 import Alert from "@mui/material/Alert";
 import { AlertTitle } from "@mui/material";
 import { Clipboard, ClipboardMode, updateClipboard } from "../../state/slices/fileSystemNav";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 export const ContenteView: FC<{}> = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -95,33 +97,35 @@ export const ContenteView: FC<{}> = () => {
                     </Alert>
                 </Stack>
             } else {
-                return <Stack
-                    onContextMenu={handleContextMenu}
-                    width="100%" height="100%"
-                    sx={{
-                        overflow: "auto"
-                    }}
-                >
+                return <DndProvider backend={HTML5Backend}>
                     <Stack
-                        padding={1}
-                        gap={1}
-                        direction={"row"}
-                        flexWrap={"wrap"}
-                        justifyContent={"flex-start"}
-                        alignItems={"start"}
+                        onContextMenu={handleContextMenu}
+                        width="100%" height="100%"
+                        sx={{
+                            overflow: "auto"
+                        }}
                     >
-                        {filteredContents
-                            .map((e) => <InodeCard
-                                key={e.id}
-                                inode={e}
-                            />)}
+                        <Stack
+                            padding={1}
+                            gap={1}
+                            direction={"row"}
+                            flexWrap={"wrap"}
+                            justifyContent={"flex-start"}
+                            alignItems={"start"}
+                        >
+                            {filteredContents
+                                .map((e) => <InodeCard
+                                    key={e.id}
+                                    inode={e}
+                                />)}
+                        </Stack>
+                        <ContentViewContextMenu
+                            isOpen={isOpen}
+                            anchorEl={anchorEl}
+                            handleClose={handleClose}
+                        />
                     </Stack>
-                    <ContentViewContextMenu
-                        isOpen={isOpen}
-                        anchorEl={anchorEl}
-                        handleClose={handleClose}
-                    />
-                </Stack>
+                </DndProvider>
             }
         } else {
             return <Stack

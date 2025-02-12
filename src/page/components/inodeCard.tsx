@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, forwardRef, useState } from "react";
 import { ID, Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
 import Card from "@mui/material/Card";
 import CardMedia from "@mui/material/CardMedia";
@@ -26,57 +26,86 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import { useDrag, useDrop } from "react-dnd";
 
 const iconDim = 100;
 
-export const InodeCard: FC<{ inode: Inode }> = ({ inode }) => {
-    const dispatch = useDispatch<AppDispatch>()
+export const InodeCard = forwardRef<HTMLDivElement, { inode: Inode }>(
+    ({ inode }, ref) => {
+        const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
+        const dispatch = useDispatch<AppDispatch>()
+        const fsService: FsService = useFsService();
 
-    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-    const isOpen: boolean = Boolean(anchorEl)
-    const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
-        event.preventDefault()
-        event.stopPropagation()
-        setAnchorEl(event.currentTarget)
-    }
-    const handleClose = () => {
-        setAnchorEl(null)
-    }
+        // Context Menu
+        const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+        const isOpen: boolean = Boolean(anchorEl)
+        const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setAnchorEl(event.currentTarget)
+        }
+        const handleClose = () => {
+            setAnchorEl(null)
+        }
 
-    return <Card
-        variant="outlined"
-        sx={{
-            width: iconDim,
-            background: (theme) => theme.palette.primary.light,
-            "&:hover": {
-                background: (theme) => theme.palette.primary.dark,
+        // Drag and Drop
+        const [_drag, drag] = useDrag(() => ({
+            type: 'inode',
+            item: inode,
+        }), [inode.id])
+        const [_drop, drop] = useDrop(() => ({
+            accept: inode.type == InodeType.Directory ? 'inode' : 'nothing',
+            drop: (dropped: Inode) => {
+                fsService.moveInode(cwdID, dropped.id, inode.id)
+                // console.log(`SRC: ${dropped.name}`)
+                // console.log(`DEST: ${inode.name}`)
             }
-        }}
-        onContextMenu={handleContextMenu}
-        onDoubleClick={() => {
-            switch (inode.type) {
-                case InodeType.Directory:
-                    dispatch(navAppend(inode.id))
-                    return
-                case InodeType.SymbolicLink:
-                    if (inode instanceof SymbolicLink) {
-                        dispatch(navAppend(inode.destinationID))
-                    }
-            }
-        }}
-    >
-        <CardMedia>
-            <InodeCardIcon inodeType={inode.type} />
-        </CardMedia>
-        <Typography align="center"> {inode.name} </Typography>
-        <InodeCardContextMenu
-            inode={inode}
-            isOpen={isOpen}
-            anchorEl={anchorEl}
-            handleClose={handleClose}
-        />
-    </Card>
-}
+        }))
+
+        return <Card
+            ref={(node) => {
+                drag(node);  // Connecting the drag ref
+                drop(node);
+                if (typeof ref === 'function') {
+                    ref(node);  // Passing ref if it exists
+                } else if (ref && 'current' in ref) {
+                    ref.current = node;  // Forwards the ref to the parent component
+                }
+            }}
+            variant="outlined"
+            sx={{
+                width: iconDim,
+                background: (theme) => theme.palette.primary.light,
+                "&:hover": {
+                    background: (theme) => theme.palette.primary.dark,
+                }
+            }}
+            onContextMenu={handleContextMenu}
+            onDoubleClick={() => {
+                switch (inode.type) {
+                    case InodeType.Directory:
+                        dispatch(navAppend(inode.id))
+                        return
+                    case InodeType.SymbolicLink:
+                        if (inode instanceof SymbolicLink) {
+                            dispatch(navAppend(inode.destinationID))
+                        }
+                }
+            }}
+        >
+            <CardMedia>
+                <InodeCardIcon inodeType={inode.type} />
+            </CardMedia>
+            <Typography align="center"> {inode.name} </Typography>
+            <InodeCardContextMenu
+                inode={inode}
+                isOpen={isOpen}
+                anchorEl={anchorEl}
+                handleClose={handleClose}
+            />
+        </Card>
+    }
+)
 
 const InodeCardContextMenu: FC<{
     inode: Inode,
