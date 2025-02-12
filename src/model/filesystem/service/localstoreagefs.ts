@@ -143,17 +143,27 @@ export class LocalStoreFsService implements FsService {
         this._applyExistingAction()
     }
 
-    private _apply(action: FsAction) {
-        if (action instanceof Mknode) {
-            this._applyMknode(action)
-        } else if (action instanceof Mv) {
-            this._applyMv(action)
-        } else if (action instanceof Rename) {
-            this._applyRename(action)
-        } else if (action instanceof Delete) {
-            this._applyDelete(action)
-        } else {
-            throw new Error("unown_action")
+    private _apply(action: FsAction): Promise<void> {
+        try {
+            if (action instanceof Mknode) {
+                this._applyMknode(action)
+            } else if (action instanceof Mv) {
+                this._applyMv(action)
+            } else if (action instanceof Rename) {
+                this._applyRename(action)
+            } else if (action instanceof Delete) {
+                this._applyDelete(action)
+            } else {
+                throw new Error("unkown_action")
+            }
+        } catch (error) {
+            if (typeof error)
+                return Promise.reject(error)
+            else if (error instanceof Error) {
+                return Promise.reject(error.message)
+            }
+        } finally {
+            return Promise.resolve()
         }
     }
 
