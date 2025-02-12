@@ -30,7 +30,7 @@ export const MenuBar: FC<{}> = () => {
 
 const Nav: FC<{}> = () => {
     const dispatch = useDispatch<AppDispatch>();
-    const currentDir: string | undefined = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].inode?.name)
+    const currentDir = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex])
     const navBackwardEnabled: boolean = useSelector((state: RootState) => state.fileSystemNav.cwdIndex > 0)
     const navForwardEnabled: boolean = useSelector((state: RootState) => state.fileSystemNav.cwdIndex < state.fileSystemNav.history.length - 1)
     return < Stack
@@ -60,7 +60,7 @@ const Nav: FC<{}> = () => {
             </Box>
         </Tooltip>
         <Typography variant="h5" fontWeight={"bold"}>
-            {currentDir ?? ""}
+            {currentDir.inode != null ? currentDir.inode.name : currentDir.error}
         </Typography>
     </Stack >
 }

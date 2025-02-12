@@ -31,18 +31,17 @@ export function connect() {
 
     // Get Current History
     const history = useSelector((state: RootState) => state.fileSystemNav.history)
-    const historyStr = history.map((e => e.id)).reduce((a, b) => `${a}/${b}`)
     // Update history inode metadata as per current history
     useEffect(() => {
         history
-            .filter((e) => e.inode == undefined)
-            .forEach((v) => {
+            .filter((e) => e.inode == undefined && e.error == undefined)
+            .forEach((e) => {
                 dispatch(addinodeinhistory({
                     service: fsService,
-                    path: v.id,
+                    path: e.id,
                 }))
             })
-    })
+    }, [history.map<boolean>((e) => e.inode == undefined && e.error == undefined).map<string>((e: boolean) => e ? 't' : 'f').reduce((a, b) => `${a}-${b}`)])
     // Update history inode metadata as per updates from service
     useEffect(() => {
         const subscription: Subscription = fsService.watchInodes(
@@ -57,11 +56,10 @@ export function connect() {
         return () => {
             return subscription.unsubscribe()
         }
-    }, [historyStr])
+    }, [history.map<string>((e) => e.id).reduce((a, b) => `${a}-${b}`)])
 
     // Get Current Content
     const contents = useSelector((state: RootState) => state.fileSystemNav.contents).map((e) => e.id)
-    const contentsStr = contents.length == 0 ? "" : contents.reduce((a, b) => `${a}/${b}`)
     useEffect(() => {
         const subscription: Subscription = fsService.watchInodes(
             contents,
@@ -75,5 +73,5 @@ export function connect() {
         return () => {
             return subscription.unsubscribe()
         }
-    }, [contentsStr])
+    }, [contents.length == 0 ? "" : contents.reduce((a, b) => `${a}/${b}`)])
 }

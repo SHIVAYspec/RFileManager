@@ -7,17 +7,18 @@ export enum ClipboardMode {
     CUT
 }
 
-export type Clipboard = {
+export interface Clipboard {
     mode: ClipboardMode,
     parentDir: ID,
     src: ID,
 }
 
-type T = {
+interface T {
     loading: boolean,
     history: Array<{
         id: ID,
-        inode?: Inode
+        inode?: Inode,
+        error?: string,
     }>
     cwdIndex: number,
     contents: Array<Inode>
@@ -62,6 +63,11 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
         updateClipboard: (state, action: PayloadAction<Clipboard | undefined>) => {
             state.clipboard = action.payload
         },
+        setCwdIndex: (state, action: PayloadAction<number>) => {
+            if (action.payload < state.history.length) {
+                state.cwdIndex = action.payload
+            }
+        }
     },
     extraReducers: (builder) => {
         // 'fs/list'
@@ -124,4 +130,4 @@ export const updateInodeInContents = createAsyncThunk('fs/updateInodeInContents'
 })
 
 
-export const { navForward, navBackward, navAppend, updateClipboard } = fileSystemNavSlice.actions
+export const { navForward, navBackward, navAppend, updateClipboard, setCwdIndex } = fileSystemNavSlice.actions

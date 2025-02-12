@@ -7,9 +7,10 @@ import ListItemText from "@mui/material/ListItemText"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import { FC } from "react"
-import { RootState } from "../../state/store"
-import { useSelector } from "react-redux"
+import { AppDispatch, RootState } from "../../state/store"
+import { useDispatch, useSelector } from "react-redux"
 import { InodeCardIcon } from "./inodeCard"
+import { setCwdIndex } from "../../state/slices/fileSystemNav"
 
 export const Sidebar: FC<{}> = () => {
     return <Stack padding={1}>
@@ -19,6 +20,7 @@ export const Sidebar: FC<{}> = () => {
 }
 
 const History: FC<{}> = () => {
+    const dispatch = useDispatch<AppDispatch>();
     const history = useSelector((state: RootState) => state.fileSystemNav.history)
     const currentIndex = useSelector((state: RootState) => state.fileSystemNav.cwdIndex)
     return <>
@@ -31,7 +33,9 @@ const History: FC<{}> = () => {
         <List>
             {history.map((e, i) =>
                 e.inode ?
-                    <ListItem key={i}>
+                    <ListItem key={i} onClick={() => {
+                        dispatch(setCwdIndex(i))
+                    }}>
                         <ListItemIcon>
                             <InodeCardIcon inodeType={e.inode.type} />
                         </ListItemIcon >
