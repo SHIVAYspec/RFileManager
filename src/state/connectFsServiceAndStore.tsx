@@ -5,6 +5,7 @@ import { useFsService } from "./fsService";
 import { FsService } from "../model/filesystem/service/interface";
 import { addinodeinhistory, list, updateInodeInContents } from "./slices/fileSystemNav";
 import { Subscription } from "rxjs";
+import { ID, InodeType, SymbolicLink } from "../model/filesystem/entity";
 
 export function connect() {
     // Dispatcher
@@ -16,7 +17,7 @@ export function connect() {
     const cwdMeta = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex])
     // Update Content State
     useEffect(() => {
-        if (cwdMeta.inode != undefined || cwdMeta.inode != undefined) {
+        if (cwdMeta.inode != undefined) {
             const updateContents = () => {
                 if (cwdMeta.inode != undefined) {
                     dispatch(list({ service: fsService, pathInode: cwdMeta.inode }))
@@ -25,7 +26,16 @@ export function connect() {
             // Update Content State as per current working directory in state
             updateContents()
             // Update Content State as per updates from service
-            const subscription: Subscription = fsService.watchInode(cwdMeta.id, () => {
+            const id: ID = ((): ID => {
+                if (cwdMeta.inode.type == InodeType.Directory) {
+                    return cwdMeta.id;
+                } else if (cwdMeta.inode.type == InodeType.SymbolicLink) {
+                    return (cwdMeta.inode as SymbolicLink).destinationID;
+                } else {
+                    throw new Error("invalid_inode_type")
+                }
+            })()
+            const subscription: Subscription = fsService.watchInode(id, () => {
                 updateContents()
             })
             return () => {
