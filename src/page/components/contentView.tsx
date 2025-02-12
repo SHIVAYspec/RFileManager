@@ -15,7 +15,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MoreTimeIcon from '@mui/icons-material/MoreTime';
 import SortIcon from '@mui/icons-material/Sort';
 import { Directory, File, Inode, SymbolicLink } from "../../model/filesystem/entity";
-import { AppDispatch, RootState } from "../../state/store";
+import { AppDispatch, RootState, useCwdDirID } from "../../state/store";
 import { FsService } from "../../model/filesystem/service/interface";
 import { useFsService } from "../../state/fsService";
 import { InodeCard } from "./inodeCard";
@@ -148,7 +148,8 @@ const ContentViewContextMenu: FC<{
 }> = ({ isOpen, anchorEl, handleClose }) => {
     const fsService: FsService = useFsService()
     const dispatch = useDispatch<AppDispatch>();
-    const cwdID: string = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
+    const cwdID: string | undefined = useSelector(useCwdDirID)
+    useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
     const sortingType: SortingType = useSelector((state: RootState) => state.theme.sortingType)
     const sortingOrder: SortingOrder = useSelector((state: RootState) => state.theme.sortingOrder)
     const clipboard: Clipboard | undefined = useSelector((state: RootState) => state.fileSystemNav.clipboard)
@@ -161,8 +162,8 @@ const ContentViewContextMenu: FC<{
             vertical: "top"
         }}
     >
-        <MenuItem disabled={clipboard == undefined} onClick={() => {
-            if (clipboard != undefined) {
+        <MenuItem disabled={clipboard == undefined || cwdID == undefined} onClick={() => {
+            if (clipboard != undefined && cwdID != undefined) {
                 dispatch(updateClipboard(undefined))
                 switch (clipboard.mode) {
                     case ClipboardMode.CUT:
@@ -182,8 +183,8 @@ const ContentViewContextMenu: FC<{
             </ListItemIcon>
             Paste
         </MenuItem>
-        <MenuItem disabled={clipboard == undefined} onClick={() => {
-            if (clipboard != undefined) {
+        <MenuItem disabled={clipboard == undefined || cwdID == undefined} onClick={() => {
+            if (clipboard != undefined && cwdID != undefined) {
                 dispatch(updateClipboard(undefined))
                 fsService.createInode(
                     cwdID,
@@ -204,24 +205,28 @@ const ContentViewContextMenu: FC<{
         <MenuItem disabled={true}>
             New
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-            fsService.createInode(
-                cwdID,
-                Directory.newDefaultDirectory()
-            )
+        <MenuItem disabled={cwdID == undefined} onClick={() => {
+            if (cwdID != undefined) {
+                handleClose();
+                fsService.createInode(
+                    cwdID,
+                    Directory.newDefaultDirectory()
+                )
+            }
         }}>
             <ListItemIcon>
                 <CreateNewFolderIcon />
             </ListItemIcon>
             Folder
         </MenuItem>
-        <MenuItem onClick={() => {
-            handleClose();
-            fsService.createInode(
-                cwdID,
-                File.newDefaultFile()
-            )
+        <MenuItem disabled={cwdID == undefined} onClick={() => {
+            if (cwdID != undefined) {
+                handleClose();
+                fsService.createInode(
+                    cwdID,
+                    File.newDefaultFile()
+                )
+            }
         }}>
             <ListItemIcon>
                 <NoteAddIcon />

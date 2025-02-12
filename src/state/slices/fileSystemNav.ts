@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction, Slice } from "@reduxjs/toolkit";
-import { ID, Inode } from "../../model/filesystem/entity";
+import { ID, Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
 import { FsService } from "../../model/filesystem/service/interface";
 
 export enum ClipboardMode {
@@ -41,16 +41,22 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
     initialState,
     reducers: {
         navForward: (state) => {
+            state.contents = [];
+            state.contentsError = undefined
             if (state.cwdIndex != state.history.length - 1) {
                 state.cwdIndex++
             }
         },
         navBackward: (state) => {
+            state.contents = [];
+            state.contentsError = undefined
             if (state.cwdIndex != 0) {
                 state.cwdIndex--
             }
         },
         navAppend: (state, action: PayloadAction<ID>) => {
+            state.contents = [];
+            state.contentsError = undefined
             // slice the array if cwdIndex is not the last index of history array
             if (state.cwdIndex != state.history.length - 1) {
                 state.history = state.history.slice(0, state.cwdIndex + 1)
@@ -60,14 +66,16 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
             }
             state.history.push({ id: action.payload })
         },
-        updateClipboard: (state, action: PayloadAction<Clipboard | undefined>) => {
-            state.clipboard = action.payload
-        },
         setCwdIndex: (state, action: PayloadAction<number>) => {
+            state.contents = [];
+            state.contentsError = undefined
             if (action.payload < state.history.length) {
                 state.cwdIndex = action.payload
             }
-        }
+        },
+        updateClipboard: (state, action: PayloadAction<Clipboard | undefined>) => {
+            state.clipboard = action.payload
+        },
     },
     extraReducers: (builder) => {
         // 'fs/list'
@@ -113,8 +121,14 @@ export const fileSystemNavSlice: Slice<T> = createSlice({
     }
 });
 
-export const list = createAsyncThunk('fs/list', async (props: { service: FsService, path: ID }): Promise<Array<Inode>> => {
-    return props.service.getDirectoryChildren(props.path)
+export const list = createAsyncThunk('fs/list', async ({ service, pathInode }: { service: FsService, pathInode: Inode }): Promise<Array<Inode>> => {
+    if (pathInode.type == InodeType.Directory) {
+        return service.getDirectoryChildren(pathInode.id)
+    } else if (pathInode.type == InodeType.SymbolicLink && pathInode instanceof SymbolicLink) {
+        return service.getDirectoryChildren(pathInode.destinationID)
+    } else {
+        throw 'invalid_inode_type'
+    }
 })
 
 export const addinodeinhistory = createAsyncThunk('fs/addinodeinhistory', async (props: { service: FsService, path: ID }): Promise<Inode | ID> => {

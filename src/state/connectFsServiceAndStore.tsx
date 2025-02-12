@@ -5,7 +5,6 @@ import { useFsService } from "./fsService";
 import { FsService } from "../model/filesystem/service/interface";
 import { addinodeinhistory, list, updateInodeInContents } from "./slices/fileSystemNav";
 import { Subscription } from "rxjs";
-import { ID } from "../model/filesystem/entity";
 
 export function connect() {
     // Dispatcher
@@ -14,20 +13,43 @@ export function connect() {
     const fsService: FsService = useFsService();
 
     // Get Current Working Directory ID
-    const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
-    // Update Content State as per current working directory in state
+    const cwdMeta = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex])
+    // Update Content State
     useEffect(() => {
-        dispatch(list({ service: fsService, path: cwdID }))
-    }, [cwdID])
-    // Update Content State as per updates from service
-    useEffect(() => {
-        const subscription: Subscription = fsService.watchInode(cwdID, () => {
-            dispatch(list({ service: fsService, path: cwdID }))
-        })
-        return () => {
-            subscription.unsubscribe()
+        if (cwdMeta.inode != undefined || cwdMeta.inode != undefined) {
+            const updateContents = () => {
+                if (cwdMeta.inode != undefined) {
+                    dispatch(list({ service: fsService, pathInode: cwdMeta.inode }))
+                }
+            }
+            // Update Content State as per current working directory in state
+            updateContents()
+            // Update Content State as per updates from service
+            const subscription: Subscription = fsService.watchInode(cwdMeta.id, () => {
+                updateContents()
+            })
+            return () => {
+                subscription.unsubscribe()
+            }
         }
-    }, [cwdID])
+    }, [cwdMeta])
+
+    // Get Current Content
+    const contents = useSelector((state: RootState) => state.fileSystemNav.contents).map((e) => e.id)
+    useEffect(() => {
+        const subscription: Subscription = fsService.watchInodes(
+            contents,
+            (id) => {
+                dispatch(updateInodeInContents({
+                    service: fsService,
+                    id: id,
+                }))
+            }
+        )
+        return () => {
+            return subscription.unsubscribe()
+        }
+    }, [contents.length == 0 ? "" : contents.reduce((a, b) => `${a}/${b}`)])
 
     // Get Current History
     const history = useSelector((state: RootState) => state.fileSystemNav.history)
@@ -57,21 +79,4 @@ export function connect() {
             return subscription.unsubscribe()
         }
     }, [history.map<string>((e) => e.id).reduce((a, b) => `${a}-${b}`)])
-
-    // Get Current Content
-    const contents = useSelector((state: RootState) => state.fileSystemNav.contents).map((e) => e.id)
-    useEffect(() => {
-        const subscription: Subscription = fsService.watchInodes(
-            contents,
-            (id) => {
-                dispatch(updateInodeInContents({
-                    service: fsService,
-                    id: id,
-                }))
-            }
-        )
-        return () => {
-            return subscription.unsubscribe()
-        }
-    }, [contents.length == 0 ? "" : contents.reduce((a, b) => `${a}/${b}`)])
 }

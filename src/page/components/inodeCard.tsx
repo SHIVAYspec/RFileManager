@@ -1,5 +1,5 @@
 import { FC, forwardRef, useState } from "react";
-import { ID, Inode, InodeType, SymbolicLink } from "../../model/filesystem/entity";
+import { Inode, InodeType } from "../../model/filesystem/entity";
 import Card from "@mui/material/Card";
 import CardMedia from "@mui/material/CardMedia";
 import Menu from "@mui/material/Menu";
@@ -8,7 +8,7 @@ import Typography from "@mui/material/Typography";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../state/store";
+import { AppDispatch, useCwdDirID } from "../../state/store";
 import { ClipboardMode, navAppend, updateClipboard } from "../../state/slices/fileSystemNav";
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
@@ -32,7 +32,7 @@ const iconDim = 100;
 
 export const InodeCard = forwardRef<HTMLDivElement, { inode: Inode }>(
     ({ inode }, ref) => {
-        const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
+        const cwdID: string | undefined = useSelector(useCwdDirID)
         const dispatch = useDispatch<AppDispatch>()
         const fsService: FsService = useFsService();
 
@@ -56,9 +56,9 @@ export const InodeCard = forwardRef<HTMLDivElement, { inode: Inode }>(
         const [_drop, drop] = useDrop(() => ({
             accept: inode.type == InodeType.Directory ? 'inode' : 'nothing',
             drop: (dropped: Inode) => {
-                fsService.moveInode(cwdID, dropped.id, inode.id)
-                // console.log(`SRC: ${dropped.name}`)
-                // console.log(`DEST: ${inode.name}`)
+                if (cwdID != undefined) {
+                    fsService.moveInode(cwdID, dropped.id, inode.id)
+                }
             }
         }))
 
@@ -82,15 +82,7 @@ export const InodeCard = forwardRef<HTMLDivElement, { inode: Inode }>(
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={() => {
-                switch (inode.type) {
-                    case InodeType.Directory:
-                        dispatch(navAppend(inode.id))
-                        return
-                    case InodeType.SymbolicLink:
-                        if (inode instanceof SymbolicLink) {
-                            dispatch(navAppend(inode.destinationID))
-                        }
-                }
+                dispatch(navAppend(inode.id))
             }}
         >
             <CardMedia>
@@ -121,7 +113,7 @@ const InodeCardContextMenu: FC<{
 }> = ({ inode, isOpen, anchorEl, handleClose }) => {
     const dispatch = useDispatch<AppDispatch>();
     const fsService: FsService = useFsService()
-    const cwdID: ID = useSelector((state: RootState) => state.fileSystemNav.history[state.fileSystemNav.cwdIndex].id)
+    const cwdID: string | undefined = useSelector(useCwdDirID)
 
     const [open, setOpen] = useState<boolean>(false);
     const [text, setText] = useState<string>(inode.name);
@@ -181,10 +173,14 @@ const InodeCardContextMenu: FC<{
                 </ListItemIcon>
                 Rename
             </MenuItem>
-            <MenuItem onClick={() => {
-                fsService.removeInodeByID(cwdID, inode.id).then(() => {
+            <MenuItem disabled={cwdID == undefined} onClick={() => {
+                if (cwdID != undefined) {
+                    fsService.removeInodeByID(cwdID, inode.id).then(() => {
+                        handleClose();
+                    })
+                } else {
                     handleClose();
-                })
+                }
             }}>
                 <ListItemIcon>
                     <DeleteIcon />
@@ -195,11 +191,12 @@ const InodeCardContextMenu: FC<{
             <Divider />
 
             <MenuItem onClick={() => {
-                dispatch(updateClipboard({
-                    mode: ClipboardMode.CUT,
-                    parentDir: cwdID,
-                    src: inode.id
-                }))
+                if (cwdID != undefined)
+                    dispatch(updateClipboard({
+                        mode: ClipboardMode.CUT,
+                        parentDir: cwdID,
+                        src: inode.id
+                    }))
                 handleClose();
             }}>
                 <ListItemIcon>
@@ -208,11 +205,12 @@ const InodeCardContextMenu: FC<{
                 Cut
             </MenuItem>
             <MenuItem onClick={() => {
-                dispatch(updateClipboard({
-                    mode: ClipboardMode.COPY,
-                    parentDir: cwdID,
-                    src: inode.id,
-                }))
+                if (cwdID != undefined)
+                    dispatch(updateClipboard({
+                        mode: ClipboardMode.COPY,
+                        parentDir: cwdID,
+                        src: inode.id,
+                    }))
                 handleClose();
             }}>
                 <ListItemIcon>

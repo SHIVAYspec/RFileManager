@@ -8,6 +8,7 @@
 - [x] Error Handelling for empty directory
 - [X] Cut / Copy / Paste
 - [X] Drag and Drop Move
+- [X] Symbolic Link handelling
 ## To Do
 - [ ] Sidebar Contents
 - [ ] Theme Switcher
